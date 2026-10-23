@@ -1,0 +1,13 @@
+.api-recovery-notice{position:relative;display:flex;align-items:flex-start;gap:16px;background:#eef3ff;border:1px solid #cfdbf3;border-radius:16px;padding:23px 52px 23px 23px;margin-bottom:24px;color:#3e567d;overflow-wrap:anywhere}
+.api-recovery-notice>svg{flex-shrink:0;margin-top:3px;color:#4264ae}
+.api-recovery-notice>div{min-width:0;flex:1}
+.api-recovery-notice h2{font-size:18px;line-height:1.5;margin:0 0 8px;font-weight:600;color:#30486d}
+.api-recovery-notice p{margin:0 0 16px;font-size:14px;line-height:1.8}
+.api-recovery-actions{display:flex;align-items:center;justify-content:inherit;flex-wrap:wrap;gap:12px;margin:18px 0}
+.api-recovery-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;margin:0;max-width:100%;white-space:normal;text-align:center}
+.api-recovery-actions small{flex-basis:100%;font-size:12px;line-height:1.7;color:#617491}
+.api-recovery-dismiss{position:absolute;top:15px;right:13px;display:grid;place-items:center;min-width:36px;min-height:36px;border-radius:8px;background:transparent;color:#617491;cursor:pointer}
+.api-recovery-dismiss:hover{background:#dfe8fa}
+.api-recovery-dismiss:focus-visible,.api-recovery-actions a:focus-visible{outline:3px solid #315bea;outline-offset:3px}
+.error-state .api-recovery-actions{justify-content:center;max-width:640px}
+@media(max-width:600px){.api-recovery-notice{padding:20px 44px 20px 18px;gap:11px}.api-recovery-notice h2{font-size:17px}.api-recovery-actions{align-items:stretch;flex-direction:column}.api-recovery-actions small{flex-basis:auto}.api-recovery-actions .btn{width:100%;min-height:44px!important}}

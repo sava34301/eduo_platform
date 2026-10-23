@@ -1,0 +1,204 @@
+// Actual gradebook routes with fictional school members and isolated storage.
+export async function checkSchoolGradebook({check,sql,setUser,store,env,dir,change,directory,schoolId,classA,classB,pupilA,pupilB,pupilC,owner,teacher,colleague,otherTeacher,student,studentB,studentC,parent,app}) {
+  const route=await import(dir+'/school-gradebook.mjs'),helpers=await import(dir+'/school-gradebook-data.mjs'),platform=await import(dir+'/platform-data.mjs'),namespace='eduo-school:'+schoolId;
+  let revision=(await directory()).school.revision;
+  const get=async(grade,school=schoolId,extra='')=>{const q=new URLSearchParams();if(school)q.set('school',school);if(grade)q.set('grade',grade);const response=await route.GET(new Request('https://example.test/api/school-gradebook?'+q+extra));return{status:response.status,data:await response.json(),response}};
+  const post=async(type,data,headers={})=>{const response=await route.POST(new Request('https://example.test/api/school-gradebook',{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify({type,data:{schoolId,directoryRevision:revision,...data}})}));return{status:response.status,data:await response.json(),response}};
+  const audit=()=>sql.prepare('SELECT COUNT(*) AS n FROM school_records WHERE owner=? AND kind=?').get(namespace,'school-audit').n;
+  const count=()=>sql.prepare('SELECT COUNT(*) AS n FROM school_records WHERE owner=? AND kind=?').get(namespace,'class-grade').n;
+  const fields={subject:'Математика',value:5,assessment:'written',date:platform.schoolToday(),term:'first',feedback:'Alpha PRIVATE feedback: explain the common denominator.'};
+  const create={id:crypto.randomUUID(),requestId:crypto.randomUUID(),revision:0,pupilId:pupilA,classId:classA,fields,confirmed:true};
+  const correct=(g,extra={})=>({id:g.id,requestId:crypto.randomUUID(),revision:g.revision,fields:{...g.fields,value:g.fields.value===6?5:6},reason:'Checked the calculation and corrected the record.',confirmed:true,...extra});
+  const state=(g,action,extra={})=>({id:g.id,revision:g.revision,requestId:crypto.randomUUID(),action,reason:'Checked the record with the responsible teacher.',confirmed:true,...extra});
+
+  setUser(null);let r=await get(undefined,null);
+  check(r.status===200&&r.data.preview&&!r.data.writable&&r.data.grades.length>0,'Anonymous gradebook is an explicitly fictional read-only preview');
+  const previewGrade=r.data.grades[0].id;
+  for(const role of ['parent','student']){r=await get(previewGrade,null,'&preview='+role);check(r.data.context.pupils.length===1&&new Set(r.data.grades.map(g=>g.pupilId)).size===1&&!r.data.canRecord,'Fictional '+role+' gradebook shows one child without write controls')}
+  check((await post('grade-add',create)).status===401,'Anonymous gradebook cannot record a grade');
+  setUser('gradebook-unaffiliated');r=await get(undefined,null);check(r.data.context===null&&!r.data.grades.length&&!r.data.canRecord,'An unaffiliated account receives no invented school grades');
+  setUser('classwork-pending');r=await get();check(r.data.context.status==='pending'&&!r.data.context.pupils.length&&!r.data.grades.length,'Pending school applicants receive no pupil roster or grades');
+  check((await get(create.id)).status===403,'Pending applicants cannot request grade detail');
+  setUser('classwork-outsider');check((await get()).status===404,'An administrator of another school cannot read this gradebook');
+  setUser(teacher);check((await get(undefined,'not-a-school-id')).status===400,'Malformed school identifiers are rejected');
+  check(count()===0,'Connected lessons and practice have not manufactured official grade records');
+  check((await post('grade-add',create,{origin:'https://foreign.test'})).status===403,'Gradebook mutations reject a foreign Origin');
+  check((await post('grade-add',create,{'sec-fetch-site':'cross-site'})).status===403,'Gradebook mutations reject cross-site requests');
+  check((await post('grade-add',create,{'content-type':'text/plain'})).status===415,'Gradebook accepts only JSON mutation bodies');
+  check((await post('toString',create)).status===400,'Inherited command names cannot reach a grade handler');
+  for(const [label,override] of [
+    ['forged author',{createdBy:owner}],['forged role',{role:'admin'}],['forged school year',{schoolYear:'2025/2026'}],['missing confirmation',{confirmed:false}],['creation with revision one',{revision:1}],['invalid grade identifier',{id:'not-a-grade'}],
+  ])check((await post('grade-add',{...create,...override})).status===400,'Gradebook rejects '+label);
+  for(const [label,overrides]of[
+    ['out-of-range high value',{value:7}],['out-of-range low value',{value:1}],['fractional value',{value:5.5}],['empty subject',{subject:' '}],['multiline subject',{subject:'Math\nGrade'}],['unknown assessment type',{assessment:'automatic-ai'}],['unknown semester',{term:'annual'}],['invalid calendar day',{date:'2026-02-30'}],['oversized feedback',{feedback:'x'.repeat(1001)}],['hidden automatic grade fields',{points:100}],
+  ])check((await post('grade-add',{...create,fields:{...fields,...overrides}})).status===400,'Grade fields reject '+label);
+  check((await post('grade-add',{...create,fields:{...fields,date:platform.plusDays(platform.schoolToday(),1)}})).status===400,'A future grade cannot be recorded');
+  check((await post('grade-add',{...create,fields:{...fields,date:'2025-10-01'}})).status===400,'A date outside the school academic year is rejected');
+  check((await post('grade-add',{...create,directoryRevision:revision-1})).status===409,'New grades require the current school directory revision');
+  check((await post('grade-add',{...create,classId:classB})).status===409,'A mismatched pupil/class selection cannot silently record in a different class');
+  setUser(student);check((await post('grade-add',create)).status===403,'A pupil cannot record their own grade');
+  setUser(parent);check((await post('grade-add',create)).status===403,'A parent cannot create a grade for their child');
+  setUser(otherTeacher);check((await post('grade-add',create)).status===403,'An unassigned teacher cannot grade another class');
+
+  setUser(teacher);const initialAudit=audit();r=await post('grade-add',create);let g=r.data.detail;
+  check(r.status===200&&g.fields.value===5&&g.revision===1&&g.canManage&&g.schoolYear==='2026/2027','Assigned teacher records a confirmed grade with a server-derived year');
+  check(audit()===initialAudit+1&&count()===1&&(await store.getRecord(namespace,'grade-ledger')).count===1,'Grade creation commits one record, capacity increment and school audit together');
+  const saved=await store.getRecord(namespace,g.id);
+  check(saved.createdBy===teacher&&saved.pupilId===pupilA&&saved.classId===classA&&saved.versions[0].actorId===teacher,'Stored grade pupil, class and actor are derived from approved membership');
+  check(!JSON.stringify(g).includes('actorId')&&!JSON.stringify(g).includes('requestId')&&!JSON.stringify(g).includes('fingerprint')&&!JSON.stringify(g).includes('createdBy'),'Grade responses redact actor IDs and retry fingerprints');
+  const ciphertext=sql.prepare('SELECT payload FROM school_records WHERE owner=? AND id=?').get(namespace,g.id).payload;
+  check(!ciphertext.includes(fields.feedback)&&!ciphertext.includes(fields.subject)&&!ciphertext.includes('Student Alpha'),'Grade value, feedback and pupil details are encrypted at rest');
+  check(r.response.headers.get('cache-control')==='private, no-store','Gradebook write responses cannot be cached across accounts');
+  check((await post('grade-add',create)).data.detail.revision===1&&audit()===initialAudit+1,'Exact grade creation retry does not duplicate a grade or audit');
+  check((await post('grade-add',{...create,fields:{...fields,value:4}})).status===409,'A reused creation request cannot change its grade');
+  check((await post('grade-add',{...create,requestId:crypto.randomUUID()})).status===409,'A different request cannot overwrite an existing grade identifier');
+  const beta={...create,id:crypto.randomUUID(),requestId:crypto.randomUUID(),pupilId:pupilB,fields:{...fields,value:3,feedback:'Beta PRIVATE feedback.'}};
+  let betaGrade=(await post('grade-add',beta)).data.detail;
+  setUser(otherTeacher);const gamma={...create,id:crypto.randomUUID(),requestId:crypto.randomUUID(),pupilId:pupilC,classId:classB,fields:{...fields,subject:'Английски език',value:4,feedback:'Gamma PRIVATE feedback.'}};
+  const gammaGrade=(await post('grade-add',gamma)).data.detail;
+  setUser(student);r=await get(g.id,schoolId,'&preview=admin');check(r.data.context.self.role==='student'&&!r.data.canRecord&&r.data.grades.every(x=>x.pupilId===pupilA),'Preview role parameters cannot elevate a real pupil gradebook');
+  check(!JSON.stringify(r.data).includes('Beta PRIVATE')&&!JSON.stringify(r.data).includes('Gamma PRIVATE'),'Student grade responses contain no classmate feedback');
+  check((await get(betaGrade.id)).status===404,'A pupil cannot open a classmate grade deep link');
+  setUser(studentB);check((await get()).data.grades.every(x=>x.pupilId===pupilB)&&(await get(g.id)).status===404,'Another pupil sees only their own grades');
+  setUser(studentC);check((await get()).data.grades.every(x=>x.pupilId===pupilC)&&(await get(g.id)).status===404,'A pupil in another class has no access to this grade');
+  setUser(parent);r=await get();check(r.data.grades.length===1&&r.data.grades[0].pupilId===pupilA&&!r.data.canRecord,'A parent receives only linked-child grades');
+  check((await get(betaGrade.id)).status===404,'A parent cannot select an unrelated child grade');
+  setUser(colleague);r=await get(g.id);check(r.status===200&&!r.data.detail.canManage&&r.data.grades.every(x=>x.classId===classA),'Assigned colleagues can read class grades without author edit rights');
+  check((await post('grade-correct',correct(g))).status===403,'A colleague cannot correct another teacher grade');
+  check((await post('grade-state',state(g,'annul'))).status===403,'A colleague cannot annul another teacher grade');
+  setUser(otherTeacher);check((await get(g.id)).status===404&&(await post('grade-correct',correct(g))).status===404,'Another class teacher cannot read or change this grade');
+  setUser(owner);r=await get();check(r.data.grades.length===3&&r.data.grades.every(x=>x.canManage),'School administrators can inspect and manage current active-class grades');
+  r=await post('grade-correct',correct(gammaGrade));check(r.status===200&&r.data.detail.fields.value===6,'School administrators can explicitly correct a current grade by another teacher');
+  const adminCorrected=await store.getRecord(namespace,gammaGrade.id);check(adminCorrected.createdBy===otherTeacher&&adminCorrected.versions.at(-1).actorId===owner,'An administrator correction preserves the original author and records its own actor');
+  setUser(otherTeacher);check((await get(gammaGrade.id)).data.detail.canManage,'Original assigned teachers keep author rights after an administrator correction');
+  setUser(owner);
+  const demo=await(await app.GET(new Request('https://example.test/api/workspace'))).json();check(!demo.records.some(x=>x.kind==='class-grade'||x.id===g.id),'School grades never leak into the old owner demo workspace');
+
+  setUser(teacher);let correction=correct(g);const beforeCorrection=audit();
+  check((await post('grade-correct',{...correction,reason:''})).status===400,'Grade correction requires an explanatory reason');
+  check((await post('grade-correct',{...correction,fields:g.fields})).status===409,'A no-op correction creates no fake history');
+  check((await post('grade-correct',{...correction,pupilId:pupilB})).status===400,'Correction cannot reassign the grade to another pupil');
+  check((await post('grade-correct',{...correction,revision:g.revision+1})).status===409,'A stale grade revision cannot overwrite a newer record');
+  r=await post('grade-correct',correction);g=r.data.detail;
+  check(g.revision===2&&g.fields.value===6&&g.versions[0].fields.value===5&&g.versions[1].reason===correction.reason,'Correction preserves the original value and records the new value and reason');
+  check(audit()===beforeCorrection+1&&(await store.getRecord(namespace,'grade-ledger')).count===3,'Correction adds one audit without increasing grade capacity');
+  check((await post('grade-correct',correction)).data.detail.revision===2&&audit()===beforeCorrection+1,'An exact correction retry creates no duplicate history or audit');
+  check((await post('grade-correct',{...correction,reason:'Different reason for reused correction'})).status===409,'A reused correction receipt cannot change its reason');
+  check((await post('grade-add',create)).data.detail.fields.value===6,'An old creation retry returns the current corrected grade without reverting it');
+  setUser(parent);r=await get(g.id);check(r.data.detail.fields.value===6&&r.data.detail.versions[0].fields.value===5&&r.data.detail.versions.length===2,'The linked parent can inspect the exact correction history');
+  check(r.response.headers.get('cache-control')==='private, no-store','Family grade reads are private and non-cacheable');
+  setUser(teacher);const annul=state(g,'annul'), annulAudit=audit();
+  check((await post('grade-state',{...annul,confirmed:false})).status===400,'Annulment needs explicit confirmation');
+  check((await post('grade-state',{...annul,reason:' '})).status===400,'Annulment needs a reason');
+  r=await post('grade-state',annul);g=r.data.detail;
+  check(g.status==='annulled'&&g.revision===3&&g.versions.length===3&&g.versions[0].fields.feedback===fields.feedback,'Annulment preserves feedback and all previous versions');
+  check(helpers.gradebookAverage([g])===null,'An annulled grade is excluded from the displayed mean');
+  check((await post('grade-correct',correct(g))).status===409,'An annulled grade must be restored before correction');
+  check((await post('grade-state',state(g,'annul'))).status===409,'Repeated annulment without the original receipt is rejected');
+  check((await post('grade-state',annul)).status===200&&audit()===annulAudit+1,'Exact annulment retry does not duplicate the action');
+  const restore=state(g,'restore');r=await post('grade-state',restore);g=r.data.detail;
+  check(g.status==='recorded'&&g.versions.length===4&&g.fields.value===6&&helpers.gradebookAverage([g,betaGrade])===4.5,'Explicit restoration preserves history and includes the current value in the mean');
+  const restoredAudit=audit();check((await post('grade-state',annul)).data.detail.status==='recorded'&&audit()===restoredAudit,'An older annulment retry does not undo a later restoration');
+
+  revision=(await change('pupil-save',{id:pupilA,name:'Student Alpha',classId:classB,number:2})).school.revision;
+  setUser(parent);r=await get(g.id);check(r.status===200&&r.data.detail.classId===classA&&!r.data.detail.canManage&&r.data.detail.versions.length===4,'A transferred family retains their own original-class grade history');
+  setUser(teacher);check(!(await get()).data.grades.some(x=>x.pupilId===pupilA)&&(await get(g.id)).status===404,'A former class teacher loses the transferred pupil grades');
+  check((await post('grade-add',create)).status===404,'Even an old receipt cannot restore revoked former-class visibility');
+  setUser(otherTeacher);check((await get(g.id)).status===404,'A new class teacher does not inherit access to old-class grade history');
+  setUser(owner);r=await get(g.id);check(r.status===200&&!r.data.detail.canManage,'Administrators retain transferred grades as read-only original-class history');
+  check((await post('grade-correct',correct(g))).status===403,'An administrator cannot silently rewrite a transferred historical grade');
+  setUser(otherTeacher);const afterTransfer={...create,id:crypto.randomUUID(),requestId:crypto.randomUUID(),classId:classB,fields:{...fields,value:4}};const transferredGrade=(await post('grade-add',afterTransfer)).data.detail;
+  setUser(parent);check((await get()).data.grades.some(x=>x.id===transferredGrade.id),'The parent sees both retained original grades and new current-class grades');
+  revision=(await change('pupil-save',{id:pupilA,name:'Student Alpha',classId:classA,number:1})).school.revision;
+  setUser(teacher);check((await get(g.id)).data.detail.canManage&&(await get(transferredGrade.id)).status===404,'Returning a pupil restores original-class management without disclosing other-class grades');
+  revision=(await change('member-access',{userId:parent,role:'parent',classIds:[],pupilIds:[pupilA,pupilB],verified:true,note:'Link two synthetic children for gradebook checks'})).school.revision;
+  setUser(parent);r=await get();check(r.data.context.pupils.length===2&&r.data.grades.some(x=>x.pupilId===pupilA)&&r.data.grades.some(x=>x.pupilId===pupilB),'A verified multi-child parent receives each linked child and no unrelated pupil');
+  revision=(await change('member-access',{userId:parent,role:'parent',classIds:[],pupilIds:[pupilB],verified:true,note:'Remove synthetic Alpha link for gradebook checks'})).school.revision;
+  setUser(parent);check((await get(g.id)).status===404&&(await get()).data.grades.every(x=>x.pupilId===pupilB),'Removing a parent link removes current and retained history for that child');
+  revision=(await change('member-access',{userId:parent,role:'parent',classIds:[],pupilIds:[pupilA],verified:true,note:'Restore synthetic linked child'})).school.revision;
+  revision=(await change('member-status',{userId:teacher,status:'suspended',note:'Temporarily suspend synthetic gradebook teacher'})).school.revision;
+  setUser(teacher);r=await get();check(r.data.context.status==='suspended'&&!r.data.grades.length&&!r.data.canRecord,'Suspended teachers receive no grades or write permissions');
+  check((await post('grade-correct',correct(g))).status===403,'An open correction is rejected after teacher suspension');
+  revision=(await change('member-status',{userId:teacher,status:'active',note:'Restore synthetic gradebook teacher'})).school.revision;
+  await change('member-status',{userId:studentB,status:'suspended',note:'Archive synthetic gradebook pupil'});revision=(await change('pupil-status',{id:pupilB,archived:true})).school.revision;
+  setUser(teacher);check(!(await get()).data.grades.some(x=>x.pupilId===pupilB),'Teacher gradebook omits archived pupil records');
+  setUser(owner);r=await get(betaGrade.id);check(r.data.detail.pupilId===pupilB&&!r.data.detail.canManage,'Administrators retain archived pupil grades as read-only history');
+  await change('pupil-status',{id:pupilB,archived:false});revision=(await change('member-status',{userId:studentB,status:'active',note:'Restore synthetic gradebook pupil'})).school.revision;
+
+  // Transaction guards and recovery after ambiguous write responses.
+  const batch=env.DB.batch.bind(env.DB);let armed=true;setUser(teacher);const guardAudit=audit(),beforeGuard=await store.getRecord(namespace,g.id);
+  env.DB.batch=async statements=>{if(armed){armed=false;const d=await store.getRecord(namespace,'directory');d.members.find(m=>m.userId===teacher).status='suspended';d.revision++;(await store.stmt(namespace,d)).run()}return batch(statements)};
+  r=await post('grade-correct',correct(g));env.DB.batch=batch;
+  check(r.status===409&&audit()===guardAudit&&(await store.getRecord(namespace,g.id)).revision===beforeGuard.revision,'Access revocation during a correction blocks both target and audit');
+  await directory();revision=(await change('member-status',{userId:teacher,status:'active',note:'Restore teacher after guarded correction'})).school.revision;
+  setUser(teacher);armed=true;const targetAudit=audit();
+  env.DB.batch=async statements=>{if(armed){armed=false;const changed=await store.getRecord(namespace,g.id);changed.revision++;changed.fields={...changed.fields,feedback:'Concurrent target feedback'};(await store.stmt(namespace,changed)).run()}return batch(statements)};
+  r=await post('grade-correct',correct(g));env.DB.batch=batch;
+  check(r.status===409&&audit()===targetAudit&&(await store.getRecord(namespace,g.id)).fields.feedback==='Concurrent target feedback','A concurrent target change cannot be overwritten by an open correction');
+  (await store.stmt(namespace,beforeGuard)).run();
+  const beforeRollbackCount=count(),beforeRollbackAudit=audit(),beforeLedger=await store.getRecord(namespace,'grade-ledger'),failedCreate={...create,id:crypto.randomUUID(),requestId:crypto.randomUUID()};
+  env.DB.batch=statements=>batch([...statements.slice(0,-1),env.DB.prepare('INSERT INTO missing_grade_audit_table(value) VALUES(?)').bind('failure')]);
+  r=await post('grade-add',failedCreate);env.DB.batch=batch;
+  check(r.status===503&&count()===beforeRollbackCount&&audit()===beforeRollbackAudit&&(await store.getRecord(namespace,'grade-ledger')).revision===beforeLedger.revision,'A real SQL audit failure rolls back grade, capacity and audit together');
+  const lostCreate={...create,id:crypto.randomUUID(),requestId:crypto.randomUUID()};env.DB.batch=async statements=>{await batch(statements);throw new Error('Synthetic lost grade creation response after commit')};
+  r=await post('grade-add',lostCreate);env.DB.batch=batch;
+  check(r.status===503&&r.data.error.includes('потвърждение')&&!!(await store.getRecord(namespace,lostCreate.id)),'A lost post-commit response is honestly unconfirmed while the grade remains saved');
+  const lostAudit=audit(),lostCount=count();r=await post('grade-add',lostCreate);
+  check(r.status===200&&audit()===lostAudit&&count()===lostCount&&(await store.getRecord(namespace,'grade-ledger')).count===lostCount,'Retrying the exact lost creation recovers one grade, one capacity increment and one audit');
+  const lostCorrection=correct(g);env.DB.batch=async statements=>{await batch(statements);throw new Error('Synthetic lost correction response after commit')};r=await post('grade-correct',lostCorrection);env.DB.batch=batch;
+  const afterLostCorrection=await store.getRecord(namespace,g.id),correctionAudit=audit();
+  check(r.status===503&&afterLostCorrection.revision===g.revision+1,'A committed correction survives a lost response');
+  r=await post('grade-correct',lostCorrection);g=r.data.detail;check(r.status===200&&g.revision===afterLostCorrection.revision&&audit()===correctionAudit,'An exact lost correction retry recovers without another history version');
+  const raceAudit=audit(),a=correct(g,{fields:{...g.fields,value:4}}),b=correct(g,{fields:{...g.fields,value:3}});let arrivals=0,release;const gate=new Promise(resolve=>release=resolve);
+  env.DB.batch=async statements=>{if(++arrivals===2)release();await gate;return batch(statements)};const corrections=await Promise.all([post('grade-correct',a),post('grade-correct',b)]);env.DB.batch=batch;
+  check(corrections.filter(x=>x.status===200).length===1&&corrections.filter(x=>x.status===409).length===1&&audit()===raceAudit+1,'Concurrent corrections accept one writer and one audit');
+  g=(await get(g.id)).data.detail;
+  const ledgerBeforeGuard=await store.getRecord(namespace,'grade-ledger'),ledgerGuardAudit=audit(),ledgerGuardGrade={...create,id:crypto.randomUUID(),requestId:crypto.randomUUID()};armed=true;
+  env.DB.batch=async statements=>{if(armed){armed=false;(await store.stmt(namespace,{...ledgerBeforeGuard,revision:ledgerBeforeGuard.revision+1})).run()}return batch(statements)};
+  r=await post('grade-add',ledgerGuardGrade);env.DB.batch=batch;
+  check(r.status===409&&audit()===ledgerGuardAudit&&!await store.getRecord(namespace,ledgerGuardGrade.id),'A changed capacity ledger blocks a new grade and its audit together');
+  (await store.stmt(namespace,ledgerBeforeGuard)).run();
+  const collisionCount=count(),collisionAudit=audit(),collisionId=crypto.randomUUID();arrivals=0;let releaseCollision;const collisionGate=new Promise(resolve=>releaseCollision=resolve);
+  env.DB.batch=async statements=>{if(++arrivals===2)releaseCollision();await collisionGate;return batch(statements)};
+  const collision=await Promise.all([post('grade-add',{...create,id:collisionId,requestId:crypto.randomUUID()}),post('grade-add',{...create,id:collisionId,requestId:crypto.randomUUID(),fields:{...fields,value:4}})]);env.DB.batch=batch;
+  check(collision.filter(x=>x.status===200).length===1&&collision.filter(x=>x.status===409).length===1,'Concurrent creation using one grade identifier has one winner');
+  check(count()===collisionCount+1&&audit()===collisionAudit+1&&(await store.getRecord(namespace,'grade-ledger')).count===collisionCount+1,'A collided creation cannot consume a phantom capacity slot or duplicate an audit');
+  const oldReceiptAudit=audit();check((await post('grade-add',{...create,directoryRevision:1})).status===200&&audit()===oldReceiptAudit,'An exact old receipt recovers safely after unrelated directory revisions without rewriting a grade');
+
+  // Reads recheck the directory after decrypting data, closing a revocation race.
+  const prepare=env.DB.prepare.bind(env.DB);armed=true;env.DB.prepare=query=>{const statement=prepare(query),bind=statement.bind;let args=[];statement.bind=function(...values){args=values;return bind.apply(this,values)};if(query==='SELECT payload FROM school_records WHERE owner=? AND kind=?'){const all=statement.all;statement.all=async()=>{const result=await all.call(statement);if(armed&&args[0]===namespace&&args[1]==='class-grade'){armed=false;const d=await store.getRecord(namespace,'directory');d.members.find(m=>m.userId===parent).status='suspended';d.revision++;(await store.stmt(namespace,d)).run()}return result}}return statement};
+  setUser(parent);r=await get(g.id);env.DB.prepare=prepare;
+  check(r.status===409&&!r.data.grades,'A membership change during grade reading returns a conflict instead of pupil records');
+  await directory();revision=(await change('member-status',{userId:parent,status:'active',note:'Restore parent after read-race check'})).school.revision;
+  setUser(teacher);const originalDirectory=await store.getRecord(namespace,'directory');
+  (await store.stmt(namespace,{...originalDirectory,year:'2027/2028',revision:originalDirectory.revision+1})).run();revision++;
+  r=await get(g.id);check(r.data.detail.schoolYear==='2026/2027'&&!r.data.detail.canManage,'Changing the active year retains earlier grades as read-only history');
+  check((await post('grade-correct',correct(g))).status===403,'Earlier-year grades cannot be corrected through the current-year editor');
+  (await store.stmt(namespace,originalDirectory)).run();revision=originalDirectory.revision;
+
+  const originalGrade=await store.getRecord(namespace,g.id),versions=Array.from({length:helpers.MAX_GRADE_VERSIONS},(_,i)=>({...originalGrade.versions[Math.min(i,originalGrade.versions.length-1)],revision:i+1,requestId:crypto.randomUUID()}));
+  (await store.stmt(namespace,{...originalGrade,revision:versions.length,versions})).run();const fullAudit=audit();g=(await get(g.id)).data.detail;
+  check((await post('grade-correct',correct(g))).status===409&&audit()===fullAudit&&(await get(g.id)).data.detail.versions.length===helpers.MAX_GRADE_VERSIONS,'The revision capacity preserves all earlier history and refuses an extra correction');
+  (await store.stmt(namespace,originalGrade)).run();g=(await get(g.id)).data.detail;
+  const ledger=await store.getRecord(namespace,'grade-ledger'),capacityAudit=audit();(await store.stmt(namespace,{...ledger,count:helpers.MAX_SCHOOL_GRADES-1})).run();
+  arrivals=0;let releaseCapacity;const capacityGate=new Promise(resolve=>releaseCapacity=resolve);
+  env.DB.batch=async statements=>{if(++arrivals===2)releaseCapacity();await capacityGate;return batch(statements)};
+  const lastSlot=await Promise.all([post('grade-add',{...create,id:crypto.randomUUID(),requestId:crypto.randomUUID()}),post('grade-add',{...create,id:crypto.randomUUID(),requestId:crypto.randomUUID()})]);env.DB.batch=batch;
+  check(lastSlot.filter(x=>x.status===200).length===1&&lastSlot.filter(x=>x.status===409).length===1&&audit()===capacityAudit+1,'Concurrent creations cannot both claim the last school grade slot');
+  r=await get(g.id);check(r.data.capacityReached&&!r.data.canRecord&&r.data.detail.canManage,'At capacity, new-grade controls stop while existing correction rights remain');
+  check((await post('grade-add',{...create,id:crypto.randomUUID(),requestId:crypto.randomUUID()})).status===409,'Server capacity is enforced independently of disabled UI controls');
+  r=await post('grade-correct',correct(g));check(r.status===200,'Existing grades remain correctable after the school creation capacity is reached');g=r.data.detail;
+  (await store.stmt(namespace,{...ledger,count:count(),revision:ledger.revision+3})).run();
+
+  const bodyAudit=audit(),mutation={type:'grade-add',data:{schoolId,directoryRevision:revision,...create}};
+  for(const raw of ['{','null','[]',JSON.stringify({...mutation,actorId:owner})]){const response=await route.POST(new Request('https://example.test/api/school-gradebook',{method:'POST',headers:{'content-type':'application/json'},body:raw}));check(response.status===400,'Invalid or extra-field gradebook command '+raw.slice(0,30)+' is rejected')}
+  let response=await route.POST(new Request('https://example.test/api/school-gradebook',{method:'POST',headers:{'content-type':'application/json','content-length':'32001'},body:'{}'}));check(response.status===413,'Declared oversized grade requests are rejected before parsing');
+  response=await route.POST(new Request('https://example.test/api/school-gradebook',{method:'POST',headers:{'content-type':'application/json'},body:' '.repeat(32001)}));check(response.status===413,'Actual streamed grade request bytes are bounded without trusting Content-Length');
+  let cancelled=false;const stream=new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('я'.repeat(17000)))},cancel(){cancelled=true}});
+  response=await route.POST(new Request('https://example.test/api/school-gradebook',{method:'POST',headers:{'content-type':'application/json','content-length':'10'},body:stream,duplex:'half'}));
+  check(response.status===413&&cancelled,'Multibyte oversized grade streams are measured by bytes and cancelled');
+  check(audit()===bodyAudit,'Rejected malformed and oversized bodies create no grade audit');
+  const key=env.SCHOOL_ENCRYPTION_KEY;env.SCHOOL_ENCRYPTION_KEY='';r=await get();env.SCHOOL_ENCRYPTION_KEY=key;
+  check(r.status===503&&!r.data.preview&&!r.data.grades,'Missing grade encryption returns an honest failure, never synthetic grades for a signed-in account');
+  check(helpers.gradebookAverage([{status:'recorded',fields:{value:2}},{status:'recorded',fields:{value:6}},{status:'annulled',fields:{value:6}}])===4,'The informational mean uses current recorded values only');
+}
