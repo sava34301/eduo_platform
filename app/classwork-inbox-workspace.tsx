@@ -8,7 +8,7 @@ import { Button, Choice, PageHeading, Pill, Blank } from './eduo-ui';
 import { schoolRoleLabels, type SchoolRole } from '@/lib/school-directory-data';
 import { inboxKindLabels, inboxHomeworkDestination, type ClassworkInboxHome, type ClassworkNotice, type InboxKind } from '@/lib/classwork-inbox-data';
 
-const icons = { assignment: BookOpen, update: RefreshCw, submission: Send, feedback: MessageSquare, revision: FileCheck2, state: Inbox, grade: GraduationCap, attendance: CalendarCheck, explanation: MessageSquare, document: FileCheck2 };
+const icons = { assignment: BookOpen, update: RefreshCw, submission: Send, feedback: MessageSquare, revision: FileCheck2, state: Inbox, grade: GraduationCap, attendance: CalendarCheck, explanation: MessageSquare, announcement: MessageSquare, document: FileCheck2 };
 const day = (s: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Sofia', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
 const dayLabel = (s: string) => day(s) === schoolToday() ? 'Днес' : day(s) === plusDays(schoolToday(), -1) ? 'Вчера' : new Date(s).toLocaleDateString('bg-BG', { timeZone: 'Europe/Sofia', day: 'numeric', month: 'long', year: 'numeric' });
 const time = (s: string) => new Date(s).toLocaleTimeString('bg-BG', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit' });

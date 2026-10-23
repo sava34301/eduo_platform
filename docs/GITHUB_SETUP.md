@@ -2,7 +2,7 @@
 
 ## Imported source
 
-Eduo v21 was imported from source commit `195e51e20dc96355b87c73184387e60c31d4b32b`, published on 18 October 2026. The GitHub import is a clean source snapshot. Earlier Sites commit history is not migrated. Source files are preserved except the local TypeScript cache; the import adds these setup notes, README instructions and a cache ignore rule.
+Eduo v21 was imported from source commit `195e51e20dc96355b87c73184387e60c31d4b32b`, published on 18 October 2026. The initial GitHub import is a clean source snapshot. Subsequent features are recorded in this repository and the product release history. Earlier Sites commit history is not migrated. Source files are preserved except the local TypeScript cache; the import adds these setup notes, README instructions and a cache ignore rule.
 
 The repository includes the frontend, server routes, school membership and authorization logic, encrypted storage helpers, D1 schema/migrations, bundled assets/fonts and licences, feature specifications and workflow checks. No school database, user uploads, runtime secrets, local tool state, dependencies or generated application builds are imported.
 
@@ -39,4 +39,4 @@ The current implementation uses Sites-provided ChatGPT request identity for save
 
 ## Development and synchronization
 
-Work on a feature branch and review changes before merging. The live Sites source and this GitHub snapshot are separate remotes; changes are not automatically synchronized or deployed. Future synchronization should be explicit and preserve both repositories' work.
+Work on a feature branch and review changes before merging. The live Sites source and this GitHub snapshot are separate remotes; there is no automatic synchronization or deployment. The v22 update explicitly synchronizes its source to both repositories. Future synchronization should be explicit and preserve both repositories' work.

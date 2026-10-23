@@ -1,11 +1,19 @@
-# Validation — school document attachments, v21, 18 October 2026
+# Validation — school announcements, v22, 23 October 2026
 
 ## Release checks
 
 - TypeScript type check: passed.
-- 1,599 focused workflow checks: passed against the actual application route code using Node SQLite and an in-memory R2 adapter. Run `node scripts/check-workflows.mjs` from the checkout to reproduce. All identities and uploaded content in this check are synthetic, isolated test data; no live records or external services are touched.
+- 1,681 focused workflow checks: passed against the actual application route code using Node SQLite and an in-memory R2 adapter. Run `node scripts/check-workflows.mjs` from the checkout to reproduce. All identities and uploaded content in this check are synthetic, isolated test data; no live records or external services are touched.
 - The publishing workflow requires a successful production Worker build before source packaging and release.
 - `git diff --check`: passed.
+
+## October 23 — school announcements, v22
+
+`school-announcement-checks.mjs` adds 80 actual-route checks. They cover anonymous preview/write refusal, teacher/admin/class/school scopes, role selection, private drafts, audience counts/snapshots, exact text hashes, encrypted storage, request recovery, family redaction, current inbox links and source privacy. Explicit read evidence is separate from inbox seen markers; replacements have fresh slots and preserve earlier evidence, while excluded recipients cannot read the new title/body.
+
+Checks cover withdrawal, independent recipients, late approvals, transfer/unlink/suspension/reassignment and year cutoffs, school-wide admin publication, Origin/media/declared/streamed bytes and cancellation, malformed/inherited/forged input, SQL rollback, save/publish/read response loss, read/commit revocation, capacity and reserved withdrawal. Two API-helper checks exercise actual anonymous and authenticated announcement envelopes. The full suite passes **1,681** checks. No real school announcement or parent communication was sent during development.
+
+TypeScript passes. The production Worker build is required before packaging. Managed-preview desktop browser QA verified navigation, the search empty state and recovery, teacher detail/tracking, and the parent detail with staff controls and other recipients omitted. Fictional preview writes are disabled. Authenticated authoring, real read submission, mobile/touch and full keyboard traversal were not exercised in the browser. New navigation permissions, filters, recipient/edition views, confirmation controls, retained editing state and responsive styling are implemented. Actual school enrollment, production load and touch/pen behavior remain unverified. See [announcement scope](SCHOOL_ANNOUNCEMENTS.md).
 
 ## October 18 — encrypted document attachments, v21
 

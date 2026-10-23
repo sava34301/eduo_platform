@@ -1,11 +1,19 @@
-# Eduo — product concept and implementation, v21
+# Eduo — product concept and implementation, v22
 
-Research refreshed: 13 October 2026. Latest release: encrypted school document attachments and immutable edition files, 18 October 2026.
+Research refreshed: 13 October 2026. Latest release: connected school announcements with role audiences and explicit read confirmations, 23 October 2026.
 
 ## Product
 A Bulgarian school platform connecting students, teachers, parents and administrators. Each learner has an editable learning profile, a personal practice history and an educational assistant context. Personalization means explanations and support can change; assessment criteria remain explicit and teacher controlled.
 
 This repository implements a web pilot with a public Site audience and protected authenticated records. The School workspace, connected homework/inbox, class lesson library, practice, current/term/annual-grade journal, attendance and documents with encrypted attachments use approved school memberships and server-enforced class/pupil/recipient access. Original profile, practice, gradebook, file registry, messaging and file-document modules remain account-isolated demonstrations; their role selector is not authorization between real people. Institutional verification, remaining module migration, retention and operational review remain necessary before real-school use.
+
+## October 23 — school announcements and explicit read confirmations, v22
+
+The connected **Училищни съобщения** workspace adds private staff drafts, class audiences for assigned teachers, school-wide notices for administrators, selected parent/student/teacher roles, a saved-text audience review and explicit publication. Recipients are snapshotted approved accounts; future approval does not retroactively grant access. Replacements preserve earlier editions and confirmations, excluded recipients receive only their addressed text, and reasoned withdrawal closes new confirmations.
+
+A read action records the approved account, exact edition/hash and server timestamp. Reading a page or marking the inbox seen is independent. Role/class/child changes continue to enforce current access; administrators retain permitted archive evidence. School-scoped encryption, conditional directory/document/ledger writes, immutable receipt keys and exact retry recovery protect the workflow. The inbox adds exact announcement links and distinct withdrawal notices.
+
+The complete suite passes **1,681** workflow checks (80 new announcement checks and two actual client-envelope checks). TypeScript and the production Worker build are release checks. The catalogue retains 62 modules: 9 connected partial workflows, 12 demos, 23 planned, 15 integration-dependent and 3 services. Direct messages, replies, announcement attachments, external delivery and independent non-ChatGPT login remain separate work. Source changes are synchronized to the approved public GitHub repository as well as the existing Site. See [announcement access and limitations](SCHOOL_ANNOUNCEMENTS.md).
 
 ## October 18 — encrypted school document attachments, v21
 

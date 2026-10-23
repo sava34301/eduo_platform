@@ -1,4 +1,4 @@
-# Supplied specification — implementation mapping, v21
+# Supplied specification — implementation mapping, v22
 
 Reviewed against the attached 22-page updated **Eduo — Complete Platform Specification**; the [page-level complete checklist](COMPLETE_SPECIFICATION_TRACEABILITY.md) covers every section. This is a product update to the existing pilot with its current public audience and protected account/school records. Artifact and GitHub project setup were intentionally excluded as requested. All four October 13 reference images are incorporated in the [complete reference scope](REFERENCE_FEATURE_SCOPE.md) and in-app catalogue.
 
@@ -38,3 +38,5 @@ Reviewed against the attached 22-page updated **Eduo — Complete Platform Speci
 The searchable catalogue covers the electronic journal, exams, statistics/reports, clubs, materials, communication, badges, full-day groups, fees/payments, inventory, competitions, archive, calendar, teacher absence/substitutions, lecturer hours, tasks/tests, native apps, timetable generation, pupil characteristics/documents, six specialized administrative books/forms, technical support, virtual classrooms/parent meetings, guides/training, staff reviews/portfolios, thematic plans and data import/export. The exact 40-entry mapping and nine retained concept entries identify implemented parts and future work without claiming unavailable services or content.
 
 The updated document also adds explicit scope for 13 catalogue areas and detailed role, AI-memory, formal-test, drawn-signature, design and operational requirements. The original Claude/Flask version descriptions and test counts are context; this Site retains its existing host-owned authentication and encrypted Worker/D1/R2 architecture. Licences, Ministry approval and operational/legal milestones are tracked without fabricated completion.
+
+School announcements are connected in v22 with approved role/class audiences, explicit read confirmations, private drafts, replacement history, withdrawal and school inbox links. Direct conversations/replies and provider delivery remain pending; see [announcement access](SCHOOL_ANNOUNCEMENTS.md).

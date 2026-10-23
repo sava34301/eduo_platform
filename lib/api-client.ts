@@ -28,6 +28,7 @@ export const apiContracts = {
   practice: (v: JsonObject) => home(v) && context(v) && Array.isArray(v.practices) && Array.isArray(v.lessons),
   gradebook: (v: JsonObject) => home(v) && context(v) && Array.isArray(v.grades) && typeof v.canRecord === 'boolean' && typeof v.capacityReached === 'boolean',
   attendance: (v: JsonObject) => home(v) && context(v) && Array.isArray(v.sessions) && typeof v.canCreate === 'boolean' && typeof v.capacityReached === 'boolean',
+  announcements: (v: JsonObject) => home(v) && context(v) && Array.isArray(v.announcements) && typeof v.canCreate === 'boolean' && typeof v.capacityReached === 'boolean',
   schoolDocuments: (v: JsonObject) => home(v) && context(v) && Array.isArray(v.documents) && Array.isArray(v.parentCounts) && typeof v.canCreate === 'boolean' && typeof v.capacityReached === 'boolean',
 } satisfies Record<string, Validator>;
 

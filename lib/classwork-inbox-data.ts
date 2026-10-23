@@ -4,11 +4,11 @@ import { schoolToday } from './platform-data';
 
 export const INBOX_WINDOW = 200;
 export const INBOX_READ_LIMIT = 2000;
-export type InboxKind = 'assignment' | 'update' | 'submission' | 'feedback' | 'revision' | 'state' | 'grade' | 'attendance' | 'explanation' | 'document';
+export type InboxKind = 'assignment' | 'update' | 'submission' | 'feedback' | 'revision' | 'state' | 'grade' | 'attendance' | 'explanation' | 'document' | 'announcement';
 export type ClassworkNotice = {
   id: string; kind: InboxKind; title: string; summary: string; at: string;
   assignmentId: string; assignmentTitle: string; subject: string; classId: string; className: string;
-  gradeId?: string; attendanceId?: string; documentId?: string;
+  gradeId?: string; attendanceId?: string; documentId?: string; announcementId?: string;
   pupilId?: string; pupilName?: string; unread: boolean; needsAction: boolean;
 };
 export type ClassworkInboxHome = Pick<ClassworkHome, 'writable' | 'preview' | 'schools' | 'context'> & {
@@ -21,13 +21,14 @@ export const inboxKindLabels: Record<InboxKind, string> = {
   assignment: 'Ново домашно', update: 'Промяна на условието', submission: 'Предаване',
   feedback: 'Обратна връзка', revision: 'За поправка', state: 'Архив и възстановяване',
   grade: 'Оценка', attendance: 'Присъствие', explanation: 'Обяснение за отсъствие',
-  document: 'Документ за родител',
+  document: 'Документ за родител', announcement: 'Училищно съобщение',
 };
-export function inboxHomeworkDestination(schoolId: string, notice: Pick<ClassworkNotice, 'assignmentId' | 'pupilId' | 'gradeId' | 'attendanceId' | 'documentId'>) {
+export function inboxHomeworkDestination(schoolId: string, notice: Pick<ClassworkNotice, 'assignmentId' | 'pupilId' | 'gradeId' | 'attendanceId' | 'documentId' | 'announcementId'>) {
   const q = new URLSearchParams({ school: schoolId });
   if (notice.pupilId) q.set('pupil', notice.pupilId);
   if (notice.gradeId) { q.set('grade', notice.gradeId); return 'school-gradebook?' + q; }
   if (notice.attendanceId) { q.set('session', notice.attendanceId); return 'school-attendance?' + q; }
+  if (notice.announcementId) { q.set('announcement', notice.announcementId); return 'school-announcements?' + q; }
   if (notice.documentId) { q.set('document', notice.documentId); return 'school-documents?' + q; }
   q.set('assignment', notice.assignmentId);
   return 'classwork?' + q;

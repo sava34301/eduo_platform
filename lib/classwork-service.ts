@@ -10,6 +10,7 @@ import { workFileChoiceError } from './classwork-file-policy';
 import { taskNotices, inboxWindow, INBOX_READ_LIMIT, type ClassworkInboxHome, type ClassworkInboxState } from './classwork-inbox-data';
 import { gradebookInboxNotices } from './school-gradebook-service';
 import { attendanceInboxNotices } from './school-attendance-service';
+import { schoolAnnouncementNotices } from './school-announcement-service';
 import { schoolDocumentNotices } from './school-document-service';
 import type { ChatGPTUser } from '@/app/chatgpt-auth';
 
@@ -102,9 +103,9 @@ async function inboxSnapshot(user: ChatGPTUser, schoolId?: string) {
     pupils: s.pupils, role: m.role, className: s.classes.find(c => c.id === a.classId)?.name || 'Архивиран клас',
     canManage: manages(s, m, a), canSubmit: m.role === 'student' && !a.archived && a.status === 'published' && ownPupils(s, m).some(p => p.classId === a.classId),
   }));
-  const [gradeNotices, attendanceNotices, documentNotices] = await Promise.all([gradebookInboxNotices(s, m), attendanceInboxNotices(s, m), schoolDocumentNotices(s, m)]);
+  const [gradeNotices, attendanceNotices, documentNotices, announcementNotices] = await Promise.all([gradebookInboxNotices(s, m), attendanceInboxNotices(s, m), schoolDocumentNotices(s, m), schoolAnnouncementNotices(s, m)]);
   if ((await schoolDirectorySnapshot(s.schoolId))?.payload !== saved.payload) fail(409, 'Училищните права са променени. Обновете входящите.');
-  return { home: inboxWindow(home, [...notices, ...gradeNotices, ...attendanceNotices, ...documentNotices]), saved };
+  return { home: inboxWindow(home, [...notices, ...gradeNotices, ...attendanceNotices, ...documentNotices, ...announcementNotices]), saved };
 }
 async function inboxState(owner: string) {
   const snapshot = await recordSnapshot(owner, 'read-state'), state = snapshot.record as unknown as ClassworkInboxState | null;

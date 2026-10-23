@@ -1,6 +1,6 @@
 # Eduo — Bulgarian school platform
 
-A web pilot for students, teachers, parents and school administrators. Approved school memberships govern the directory, connected homework/files/inbox, lesson library, teacher-authored practice, current/term/annual-grade journal, attendance and versioned documents with encrypted attachments and independent parent/child signatures. The module catalogue captures all 40 reference-image requirements, nine retained concept modules and 13 additional PDF areas with honest readiness labels. The original profile, messaging, file-document and other administrative surfaces remain account-owned demonstrations. Live AI, national integration and device enforcement are not connected.
+A web pilot for students, teachers, parents and school administrators. Approved school memberships govern the directory, connected homework/files/inbox, lesson library, teacher-authored practice, current/term/annual-grade journal, attendance, school announcements and versioned documents with encrypted attachments and independent parent/child signatures. The module catalogue captures all 40 reference-image requirements, nine retained concept modules and 13 additional PDF areas with honest readiness labels. The original profile, messaging, file-document and other administrative surfaces remain account-owned demonstrations. Live AI, national integration and device enforcement are not connected.
 
 The application runs on Vinext/Cloudflare Workers with encrypted D1 records and encrypted school file storage in R2. The production Site is [Eduo](https://eduo.codesm27.chatgpt.site). Its existing public audience is preserved; school data requires approved authenticated membership, and original demo records remain account-scoped.
 
@@ -12,6 +12,7 @@ The application runs on Vinext/Cloudflare Workers with encrypted D1 records and 
 - [Grade and attendance activity inbox](docs/SCHOOL_ACTIVITY_ACCESS.md)
 - [Drawn signatures and provider signing scope](docs/DOCUMENT_SIGNING.md)
 - [School documents, parent recipients and signed history](docs/SCHOOL_DOCUMENT_ACCESS.md)
+- [School announcements, audiences and read confirmations](docs/SCHOOL_ANNOUNCEMENTS.md)
 - [Versioned school document attachments](docs/SCHOOL_DOCUMENT_FILES.md)
 - [Full PDF specification traceability](docs/COMPLETE_SPECIFICATION_TRACEABILITY.md)
 - [Complete reference feature scope](docs/REFERENCE_FEATURE_SCOPE.md)

@@ -72,11 +72,11 @@ export const schoolModules: SchoolModule[] = [
     links: [{ section: 'school-learning', label: 'Библиотека на класа' }, { section: 'classwork', label: 'Работи и файлове' }],
   },
   {
-    id: 'communication', title: 'Комуникация', category: 'community', state: 'demo', roles: everyone, phase: 2,
+    id: 'communication', title: 'Комуникация', category: 'community', state: 'connected', roles: everyone, phase: 2,
     summary: 'Разговори между учители, ученици и родители и избрани канали за известяване.',
-    current: 'Демо разговорите се запазват; училищната входяща показва домашни, оценки, значими промени в присъствията и разрешени обяснения, с лично прочетено/непрочетено състояние.',
-    remaining: ['Проверени получатели, училищни групи, правила за достъп и управление на разговори.', 'Email, SMS, мобилни и други разрешени канали чрез доставчици и предпочитания за доставка.'],
-    links: [{ section: 'school-inbox', label: 'Училищни входящи' }, { section: 'messages', label: 'Демо разговори' }],
+    current: 'Училищни обяви с частни чернови, класова или училищна аудитория, версии, изрично потвърден прочит, проследяване и входящи връзки. Личните демо разговори остават отделни.',
+    remaining: ['Лични разговори и отговори между проверени училищни получатели, приложения и управление на разговорите.', 'Email, SMS, мобилни и други разрешени канали чрез доставчици и предпочитания за доставка.'],
+    links: [{ section: 'school-announcements', label: 'Училищни съобщения' }, { section: 'school-inbox', label: 'Училищни входящи' }, { section: 'messages', label: 'Демо разговори' }],
   },
   {
     id: 'badges', title: 'Значки и поощрения', category: 'learning', state: 'demo', roles: everyone, phase: 2,
